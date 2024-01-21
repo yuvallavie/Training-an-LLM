@@ -5,6 +5,7 @@ This file includes the training function and other utilities needed for
 quick training of models.
 """
 
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
@@ -12,7 +13,7 @@ import seaborn as sns
 from tqdm import tqdm
 from datetime import datetime
 from colorama import init, Fore, Back, Style
-from torch import save, __version__, cuda, version, set_grad_enabled, argmax
+from torch import save, __version__, cuda, version, no_grad, set_grad_enabled
 # Initialize Colorama
 init(autoreset=True)
 
@@ -150,6 +151,8 @@ def train(model, optimizer, loaders, criterion, num_epochs, device):
     print("-"*15)
     print("Best accuracy:", best_accuracy)
     print("Epoch:", best_epoch + 1)
+    # Save the training data.
+    save_dictionary(process_data, "training_results")
     # Return the training results for analysis
     return process_data
 
@@ -175,14 +178,17 @@ def predict(model, test_loader):
     # Iterate over each batch and predict on
     # its features, save their labels.
     for features, labels in tqdm(test_loader, desc="p"):
-        # Send them to the same device.
-        features, labels = features.to(device), labels.to(device)
-        # Predict using the model.
-        preds = model.predict(features)
-        # Add the true labels and the
-        # predicted labels to lists.
-        predicted_labels.extend(preds.tolist())
-        true_labels.extend(labels.tolist())
+        # We are only propogating forward
+        # therefore, we dont need the gradients.
+        with no_grad():
+            # Send them to the same device.
+            features, labels = features.to(device), labels.to(device)
+            # Predict using the model.
+            preds = model.predict(features)
+            # Add the true labels and the
+            # predicted labels to lists.
+            predicted_labels.extend(preds.tolist())
+            true_labels.extend(labels.tolist())
     # Return the lists.
     return predicted_labels, true_labels
 
@@ -208,3 +214,16 @@ def display_classification_results(y_true, y_pred, labels=None):
     plt.ylabel('True')
     plt.title('Confusion Matrix')
     plt.show()
+
+
+# Saving a dictionary.
+def save_dictionary(dictionary: dict, dictname: str) -> None:
+    # Saving the dictionary to a file
+    with open(dictname + '.json', 'w') as file:
+        json.dump(dictionary, file)
+
+
+# Loading a dictionary
+def load_dictionary(dict_path: str) -> dict:
+    with open(dict_path, 'r') as file:
+        return json.load(file)

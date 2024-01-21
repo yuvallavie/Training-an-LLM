@@ -41,9 +41,8 @@ def generate_dictionaries(unique_tokens: set) -> dict:
     # Return both dictionaries.
     return word_to_index, index_to_word
 
+
 # Function to convert sentences to index tensor
-
-
 def sentence_to_indices(sentence: str, w2i: dict):
     """Create a tensor of indices from a sentence
 
@@ -85,7 +84,8 @@ def create_vocab(filePath: str) -> set:
     It expects the file to have entries with the following format:
     __label__y TEXT
     An example:
-    __label__1 This movie is not so good!
+    __label__negative This movie is not so good!
+    __label__positive I really liked this movie.
     """
     # Empty token set.
     unique_tokens = set()
