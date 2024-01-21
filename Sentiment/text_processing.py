@@ -1,29 +1,15 @@
+from torch import tensor
+import nltk
 from nltk.tokenize import word_tokenize
-import torch
+from nltk.stem import WordNetLemmatizer
+import contractions
 
+# Download necessary NLTK data
+nltk.download('punkt')
+nltk.download('wordnet')
 
-def create_vocab(sentences: list) -> set:
-    """Creating a unique vocabulary from a list of sentences
-
-    This function expects to receive a list of sentences in english
-    and returns a unique set of tokens from those sentences.
-    """
-    # A unique empty set.
-    unique_tokens = set()
-
-    # Run over all sentences in the list.
-    for sentence in sentences:
-        # Lower case the sentence.
-        sentence = sentence
-        # Tokenize the sentence.
-        tokens = word_tokenize(sentence)
-        # Insert each token to a unique set
-        # which keeps consistency.
-        for token in tokens:
-            unique_tokens.add(token)
-
-    # Return the vocabulary.
-    return unique_tokens
+# Initialize the lemmatizer
+lemmatizer = WordNetLemmatizer()
 
 
 def generate_dictionaries(unique_tokens: set) -> dict:
@@ -35,10 +21,15 @@ def generate_dictionaries(unique_tokens: set) -> dict:
     2. Index-To-Word.
     """
     # Word to index and Index to word dictionaries.
-    word_to_index = {"<UNK>": 0}
-    index_to_word = {0: "<UNK>"}
+    word_to_index = {
+        "<PAD>": 0,
+        "<UNK>": 1}
+    index_to_word = {
+        0: "<PAD>",
+        1: "<UNK>"}
+
     # Starting index.
-    index = 1
+    index = 2
     # Run over all tokens and add them accordingly.
     for token in unique_tokens:
         # Add the token to both dictionaries.
@@ -59,11 +50,33 @@ def sentence_to_indices(sentence: str, w2i: dict):
     This function separates a sentence into tokens
     and returns a tensor of indices for each.
     """
+    tokens = preprocess_and_tokenize(sentence)
+    return tensor([w2i[token] if token in w2i else w2i["<UNK>"] for token in tokens])
+
+
+def preprocess_and_tokenize(sentence: str) -> list[str]:
+    """Proprocess a sentence and tokenize.
+
+    This function takes a sentence and preprocesses it in a
+    way that helps models understand. It uses Lemmatization,
+    lowering and opening contractions. It eventually
+    returns a list of tokens
+    """
+    # Expand contradictions, don't -> do not.
+    sentence = contractions.fix(sentence)
+    # Transform the sentence to lowercase.
+    sentence = sentence.lower()
+    # Tokenize the sentence
     tokens = word_tokenize(sentence)
-    return torch.tensor([w2i[token] if token in w2i else w2i["<UNK>"] for token in tokens])
+    # Remove punctuation
+    tokens = [word for word in tokens if word.isalpha()]
+    # Lemmatize the tokens.
+    tokens = [lemmatizer.lemmatize(word) for word in tokens]
+    # Return the resulting tokens.
+    return tokens
 
 
-def create_vocab_lazy(filePath: str) -> set:
+def create_vocab(filePath: str) -> set:
     """Create a vocab using lazy loading.
 
     This function creates a unique vocabulary but does not 
@@ -83,9 +96,8 @@ def create_vocab_lazy(filePath: str) -> set:
             # Separate the line to (label, text).
             label, sentence = line.split(' ', 1)
             # Tokenize the text.
-            tokens = word_tokenize(sentence.lower())
+            tokens = preprocess_and_tokenize(sentence)
             # Insert the tokens to a unique set.
-            for token in tokens:
-                unique_tokens.add(token)
+            unique_tokens.update(tokens)
     # Return the unique tokens.
     return unique_tokens

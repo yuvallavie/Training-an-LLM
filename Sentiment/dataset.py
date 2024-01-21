@@ -12,7 +12,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch import tensor
 
 
-class TextDataset(Dataset):
+class AmazonDataset(Dataset):
     def __init__(self, filePath, w2i):
         print("Initializing the dataset:", filePath)
         self.filePath = filePath
@@ -32,6 +32,26 @@ class TextDataset(Dataset):
                     indices = sentence_to_indices(sentence, self.w2i)
                     return indices, label
 
+
+class ImdbDataset(Dataset):
+    def __init__(self, filePath, w2i):
+        print("Initializing the dataset:", filePath)
+        self.filePath = filePath
+        self.w2i = w2i
+
+    def __len__(self):
+        # Efficiently count lines
+        with open(self.filePath, 'r', encoding='utf-8') as file:
+            return sum(1 for _ in file)
+
+    def __getitem__(self, idx):
+        with open(self.filePath, 'r', encoding='utf-8') as file:
+            for i, line in enumerate(file):
+                if i == idx:
+                    label, sentence = line.strip().split(' ', 1)
+                    label = label = 1 if label == '__label__positive' else 0
+                    indices = sentence_to_indices(sentence, self.w2i)
+                    return indices, label
 # Custom collate function for padding
 
 
@@ -54,7 +74,7 @@ def GetData(filePath, batch_size, w2i):
     and the size of the vocab.
     """
     # Create the dataset.
-    dataset = TextDataset(filePath=filePath, w2i=w2i)
+    dataset = ImdbDataset(filePath=filePath, w2i=w2i)
 
     # Return the data.
     return DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
